@@ -8,7 +8,8 @@ RUN apk --update add upx \
     && tar -xvf rq-v1.0.2-x86_64-unknown-linux-musl.tar.gz \
     && upx --brute rq
 
-FROM library/docker:stable
+# TODO: Switch this for an official and/or self-built image.
+FROM tmaier/docker-compose:20.10
 
 COPY --from=rq-build /root/rq /usr/local/bin
 

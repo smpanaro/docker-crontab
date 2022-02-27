@@ -112,6 +112,23 @@ EOF
     fi
 }
 
+make_service_cmd() {
+    DOCKERARGS=$(echo ${1} | jq -r .dockerargs)
+    VOLUMES=$(echo ${1} | jq -r '.volumes | select(. != null) | map(" -v " + .) | join("")')
+    PORTS=$(echo ${1} | jq -r '.ports | select(. != null) | map(" -p " + .) | join("")')
+    # We'll add name in, if it exists
+    NAME=$(echo ${1} | jq -r 'select(.name != null) | .name')
+    ENVIRONMENT=$(echo ${1} | jq -r '.environment | select(. != null) | map(" -e " + .) | join("")')
+    if [ "${DOCKERARGS}" == "null" ]; then DOCKERARGS=; fi
+    if [ ! -z "${NAME}" ]; then DOCKERARGS="${DOCKERARGS} --rm --name ${NAME} "; fi
+    if [ ! -z "${VOLUMES}" ]; then DOCKERARGS="${DOCKERARGS}${VOLUMES}"; fi
+    if [ ! -z "${ENVIRONMENT}" ]; then DOCKERARGS="${DOCKERARGS}${ENVIRONMENT}"; fi
+    if [ ! -z "${PORTS}" ]; then DOCKERARGS="${DOCKERARGS}${PORTS}"; fi
+    SERVICE=$(echo ${1} | jq -r .service | envsubst)
+    TMP_COMMAND=$(echo ${1} | jq -r '.command | select(. != null)')
+    echo "docker-compose run ${DOCKERARGS} ${SERVICE} ${TMP_COMMAND}"
+}
+
 #make_host_cmd() {
 #   HOST_BINARY=$(echo ${1} | jq -r .host)
 #   TMP_COMMAND=$(echo ${1} | jq -r .command)
@@ -123,6 +140,8 @@ make_cmd() {
         make_image_cmd "$1"
     elif [ "$(echo ${1} | jq -r .container)" != "null" ]; then
         make_container_cmd "$1"
+    elif [ "$(echo ${1} | jq -r .service)" != "null" ]; then
+        make_service_cmd "$1"
     #elif [ "$(echo ${1} | jq -r .host)" != "null" ]; then
     #   make_host_cmd "$1"
     else
@@ -194,8 +213,10 @@ function build_crontab() {
         SCHEDULE=$(parse_schedule ${SCHEDULE} | sed 's/\\//g')
 
         if [ "$(jq -r .[$i].command ${CONFIG})" == "null" ]; then
-            echo "Command Missing: $(jq -r .[$i].command ${CONFIG})"
-            continue
+            if [ "$(jq -r .[$i].service ${CONFIG})" == "null" ]; then
+                echo "Command Missing: $(jq -r .[$i].command ${CONFIG})"
+                continue
+            fi
         fi
 
         COMMENT=$(jq -r .[$i].comment ${CONFIG})

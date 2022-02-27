@@ -6,9 +6,20 @@ services:
     restart: always
     command: "sh -c 'while :; do sleep 1; done'"
 
+  myscript:
+    image: alpine:3.5
+    # Use a profile so that this script is not started by `docker-compose up`.
+    profiles:
+      - script
+    restart: "no"
+    command: "echo 'this is my script'"
+
   crontab:
     build: .
     restart: always
     volumes:
      - "/var/run/docker.sock:/var/run/docker.sock:ro"
      - "${PWD}/config-samples/config.sample.mapping.json:/opt/crontab/config.json:rw"
+     # This line is only needed if you have configs that use the service parameter to
+     # run services via docker-compose.
+     - "${PWD}/docker-compose.yml:/docker-compose.yml:ro"

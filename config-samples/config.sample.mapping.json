@@ -46,5 +46,12 @@
       }
     ],
     "onstart": true
+  },
+  "docker-compose service": {
+    "comment": "Run a short-lived service defined in docker-compose.yml",
+    "schedule": "@hourly",
+    "service": "myscript",
+    "dockerargs": "--rm",
+    "onstart": true
   }
 }
